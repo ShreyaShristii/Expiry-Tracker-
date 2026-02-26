@@ -24,6 +24,12 @@ const itemSchema = new mongoose.Schema(
       required: true
     },
 
+    renewalCycle: {
+      type: String,
+      enum: ["monthly", "yearly"],
+      default: "monthly"
+    },
+
     validTill: {
       type: Date,
       required: true
@@ -41,7 +47,22 @@ const itemSchema = new mongoose.Schema(
 
     notes: {
       type: String
-    }
+    },
+
+    // 🧠 Renewal History Tracking
+    renewalHistory: [
+      {
+        renewedOn: {
+          type: Date
+        },
+        previousValidTill: {
+          type: Date
+        },
+        newValidTill: {
+          type: Date
+        }
+      }
+    ]
   },
   { timestamps: true }
 );

@@ -16,7 +16,8 @@ router.post("/", protect, async (req, res) => {
       validTill,
       reminderDays,
       cost,
-      notes
+      notes,
+      renewalCycle
     } = req.body;
 
     const item = await Item.create({
@@ -27,7 +28,8 @@ router.post("/", protect, async (req, res) => {
       validTill,
       reminderDays,
       cost,
-      notes
+      notes,
+      renewalCycle
     });
 
     res.status(201).json(item);
@@ -37,20 +39,50 @@ router.post("/", protect, async (req, res) => {
   }
 });
 
+
 /*
   🥈 Get All Items of Logged-in User (Protected)
-  Adds dynamic status field
+  Includes Auto-Renew Logic + Dynamic Status
 */
 router.get("/", protect, async (req, res) => {
   try {
     const items = await Item.find({ user: req.user });
 
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // normalize
 
+    // 🧠 AUTO-RENEW LOGIC
+    for (let item of items) {
+
+      if (item.validityType === "renewal") {
+
+        let validTill = new Date(item.validTill);
+        validTill.setHours(0, 0, 0, 0);
+
+        while (validTill < today) {
+
+          if (item.renewalCycle === "monthly") {
+            validTill.setMonth(validTill.getMonth() + 1);
+
+          } else if (item.renewalCycle === "yearly") {
+            validTill.setFullYear(validTill.getFullYear() + 1);
+
+          } else {
+            break; // safety
+          }
+        }
+
+        if (validTill.getTime() !== new Date(item.validTill).getTime()) {
+          item.validTill = validTill;
+          await item.save();
+        }
+      }
+    }
+
+    // 🧾 STATUS CALCULATION
     const updatedItems = items.map(item => {
-      const validTill = new Date(item.validTill);
 
-      // Calculate reminder date
+      const validTill = new Date(item.validTill);
       const reminderDate = new Date(validTill);
       reminderDate.setDate(validTill.getDate() - item.reminderDays);
 
@@ -75,14 +107,18 @@ router.get("/", protect, async (req, res) => {
   }
 });
 
-module.exports = router;
-// 🧠 Dashboard Summary
+
+/*
+  🧠 Dashboard Summary
+*/
 router.get("/dashboard", protect, async (req, res) => {
   try {
     const items = await Item.find({ user: req.user });
 
     const today = new Date();
-    const next7Days = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const next7Days = new Date(today);
     next7Days.setDate(today.getDate() + 7);
 
     let total = items.length;
@@ -113,3 +149,39 @@ router.get("/dashboard", protect, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+/*
+  📜 Get Renewal History of a Specific Item
+*/
+router.get("/:id/history", protect, async (req, res) => {
+  try {
+    const item = await Item.findOne({
+      _id: req.params.id,
+      user: req.user
+    });
+
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    if (item.validityType !== "renewal") {
+      return res.status(400).json({
+        message: "Renewal history available only for renewal items"
+      });
+    }
+
+    // Sort latest first
+    const history = item.renewalHistory
+      .sort((a, b) => new Date(b.renewedOn) - new Date(a.renewedOn));
+
+    res.json({
+      itemName: item.name,
+      totalRenewals: history.length,
+      history
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+module.exports = router;
