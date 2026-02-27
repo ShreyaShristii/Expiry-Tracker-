@@ -41,17 +41,15 @@ router.post("/", protect, async (req, res) => {
 
 
 /*
-  🥈 Get All Items of Logged-in User (Protected)
-  Includes Auto-Renew Logic + Dynamic Status
+  🥈 Get All Items (Auto-Renew + Status)
 */
 router.get("/", protect, async (req, res) => {
   try {
     const items = await Item.find({ user: req.user });
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // normalize
+    today.setHours(0, 0, 0, 0);
 
-    // 🧠 AUTO-RENEW LOGIC
     for (let item of items) {
 
       if (item.validityType === "renewal") {
@@ -63,12 +61,12 @@ router.get("/", protect, async (req, res) => {
 
           if (item.renewalCycle === "monthly") {
             validTill.setMonth(validTill.getMonth() + 1);
-
-          } else if (item.renewalCycle === "yearly") {
+          } 
+          else if (item.renewalCycle === "yearly") {
             validTill.setFullYear(validTill.getFullYear() + 1);
-
-          } else {
-            break; // safety
+          } 
+          else {
+            break;
           }
         }
 
@@ -79,7 +77,6 @@ router.get("/", protect, async (req, res) => {
       }
     }
 
-    // 🧾 STATUS CALCULATION
     const updatedItems = items.map(item => {
 
       const validTill = new Date(item.validTill);
@@ -90,7 +87,8 @@ router.get("/", protect, async (req, res) => {
 
       if (today > validTill) {
         status = "Expired";
-      } else if (today >= reminderDate) {
+      } 
+      else if (today >= reminderDate) {
         status = "Expiring Soon";
       }
 
@@ -101,6 +99,34 @@ router.get("/", protect, async (req, res) => {
     });
 
     res.json(updatedItems);
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+/*
+  🔔 Get Items Needing Reminder
+*/
+router.get("/reminders", protect, async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const items = await Item.find({ user: req.user });
+
+    const reminderItems = items.filter(item => {
+      const validTill = new Date(item.validTill);
+      validTill.setHours(0, 0, 0, 0);
+
+      const reminderDate = new Date(validTill);
+      reminderDate.setDate(validTill.getDate() - item.reminderDays);
+
+      return reminderDate <= today && validTill >= today;
+    });
+
+    res.json(reminderItems);
 
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -131,9 +157,11 @@ router.get("/dashboard", protect, async (req, res) => {
 
       if (validTill < today) {
         expired++;
-      } else if (validTill <= next7Days) {
+      } 
+      else if (validTill <= next7Days) {
         expiringSoon++;
-      } else {
+      } 
+      else {
         active++;
       }
     });
@@ -149,8 +177,10 @@ router.get("/dashboard", protect, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+
 /*
-  📜 Get Renewal History of a Specific Item
+  📜 Get Renewal History
 */
 router.get("/:id/history", protect, async (req, res) => {
   try {
@@ -169,7 +199,6 @@ router.get("/:id/history", protect, async (req, res) => {
       });
     }
 
-    // Sort latest first
     const history = item.renewalHistory
       .sort((a, b) => new Date(b.renewedOn) - new Date(a.renewedOn));
 
@@ -183,5 +212,112 @@ router.get("/:id/history", protect, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+/*
+  🔄 Manual Renew Item
+*/
+router.put("/:id/renew", protect, async (req, res) => {
+  try {
+    const item = await Item.findOne({
+      _id: req.params.id,
+      user: req.user
+    });
 
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    if (item.validityType !== "renewal") {
+      return res.status(400).json({
+        message: "Only renewal items can be renewed"
+      });
+    }
+
+    const previousValidTill = new Date(item.validTill);
+    let newValidTill = new Date(previousValidTill);
+
+    if (item.renewalCycle === "monthly") {
+      newValidTill.setMonth(newValidTill.getMonth() + 1);
+    } 
+    else if (item.renewalCycle === "yearly") {
+      newValidTill.setFullYear(newValidTill.getFullYear() + 1);
+    } 
+    else {
+      return res.status(400).json({
+        message: "Invalid renewal cycle"
+      });
+    }
+
+    // 🧠 Push to renewal history
+    item.renewalHistory.push({
+      renewedOn: new Date(),
+      previousValidTill,
+      newValidTill
+    });
+
+    item.validTill = newValidTill;
+
+    await item.save();
+
+    res.json({
+      message: "Item renewed successfully",
+      item
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+/*
+  🗑 Delete Item
+*/
+router.delete("/:id", protect, async (req, res) => {
+  try {
+    const item = await Item.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user
+    });
+
+    if (!item) return res.status(404).json({ message: "Item not found" });
+
+    res.json({ message: "Item deleted successfully" });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+/*
+  ✏️ Update Item
+*/
+router.put("/:id", protect, async (req, res) => {
+  try {
+    const item = await Item.findOne({
+      _id: req.params.id,
+      user: req.user
+    });
+
+    if (!item) return res.status(404).json({ message: "Item not found" });
+
+    const allowed = [
+      "name",
+      "category",
+      "validTill",
+      "reminderDays",
+      "cost",
+      "notes",
+      "renewalCycle",
+      "validityType"
+    ];
+
+    allowed.forEach(key => {
+      if (req.body[key] !== undefined) item[key] = req.body[key];
+    });
+
+    await item.save();
+
+    res.json({ message: "Item updated successfully", item });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 module.exports = router;
