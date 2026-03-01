@@ -9,26 +9,24 @@ const protect = require("./middleware/authMiddleware");
 
 const app = express();
 
-// Middlewares
+/* ───────────── Middlewares ───────────── */
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection
+/* ───────────── MongoDB ───────────── */
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected Successfully"))
   .catch((err) => console.log("MongoDB Connection Error:", err));
 
-// Test Route
+/* ───────────── Routes ───────────── */
 app.get("/", (req, res) => {
   res.send("Backend + MongoDB is working!");
 });
 
-// Auth Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/items", itemRoutes);
 
-// Protected Test Route
 app.get("/api/protected", protect, (req, res) => {
   res.json({
     message: "You accessed protected route",

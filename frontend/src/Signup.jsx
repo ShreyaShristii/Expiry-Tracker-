@@ -1,18 +1,19 @@
 import { useState } from "react";
 
-export default function Login({ onLogin, switchMode }) {
+export default function Signup({ onLogin, switchMode }) {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const login = async () => {
-    if (!email || !password) { setError("Please fill in all fields."); return; }
+  const signup = async () => {
+    if (!name || !email || !password) { setError("Please fill in all fields."); return; }
     setLoading(true); setError("");
-    const res = await fetch("http://localhost:5000/api/auth/login", {
+    const res = await fetch("http://localhost:5000/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ name, email, password }),
     });
     const data = await res.json();
     setLoading(false);
@@ -20,7 +21,7 @@ export default function Login({ onLogin, switchMode }) {
       localStorage.setItem("token", data.token);
       onLogin(data.token);
     } else {
-      setError(data.message || "Login failed. Try again.");
+      setError(data.message || "Signup failed. Try again.");
     }
   };
 
@@ -129,19 +130,22 @@ export default function Login({ onLogin, switchMode }) {
           text-decoration: underline;
           padding: 0;
         }
-        .auth-divider {
-          height: 1px;
-          background: #EAE4DC;
-          margin: 28px 0;
-        }
       `}</style>
 
       <div className="auth-wrap">
         <div className="auth-card">
-          <h1>Welcome back</h1>
-          <p>Sign in to your Expiry Tracker account.</p>
+          <h1>Create account</h1>
+          <p>Start tracking your subscriptions today.</p>
 
           {error && <div className="auth-error">⚠ {error}</div>}
+
+          <label className="auth-label">Name</label>
+          <input
+            className="auth-input"
+            placeholder="Your name"
+            value={name}
+            onChange={e => setName(e.target.value)}
+          />
 
           <label className="auth-label">Email</label>
           <input
@@ -149,7 +153,6 @@ export default function Login({ onLogin, switchMode }) {
             placeholder="you@example.com"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && login()}
           />
 
           <label className="auth-label">Password</label>
@@ -159,16 +162,16 @@ export default function Login({ onLogin, switchMode }) {
             placeholder="••••••••"
             value={password}
             onChange={e => setPassword(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && login()}
+            onKeyDown={e => e.key === "Enter" && signup()}
           />
 
-          <button className="auth-btn" onClick={login} disabled={loading}>
-            {loading ? "Signing in…" : "Sign in"}
+          <button className="auth-btn" onClick={signup} disabled={loading}>
+            {loading ? "Creating account…" : "Create account"}
           </button>
 
           <div className="auth-switch">
-            Don't have an account?{" "}
-            <button onClick={switchMode}>Create one</button>
+            Already have an account?{" "}
+            <button onClick={switchMode}>Sign in</button>
           </div>
         </div>
       </div>
