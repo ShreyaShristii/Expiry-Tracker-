@@ -2,7 +2,7 @@ import Login from "./Login";
 import Signup from "./Signup";
 import { useEffect, useMemo, useState } from "react";
 
-const API = "http://localhost:5000";
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 /* ───────── STATUS ───────── */
 const STATUS = {
@@ -50,6 +50,7 @@ export default function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [mode,  setMode]  = useState("login");
   const [items, setItems] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
   const [name,  setName]  = useState("");
   const [cat,   setCat]   = useState("");
@@ -58,6 +59,7 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [addError, setAddError] = useState("");
+  const [deleteModal, setDeleteModal] = useState(null);
 
   /* ── Sync token to localStorage ── */
   useEffect(() => {
@@ -71,6 +73,18 @@ export default function App() {
     fetch(`${API}/api/items`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(setItems).catch(console.error);
   }, [token]);
+
+  /* ── Fetch notifications ── */
+  useEffect(() => {
+    if (!token) return;
+    
+    fetch(`${API}/api/notifications`, { 
+      headers: { Authorization: `Bearer ${token}` } 
+    })
+      .then(r => r.json())
+      .then(data => setNotifications(data.data || []))
+      .catch(console.error);
+  }, [token, items]);
 
   /* ── Add ── */
   const add = async () => {
@@ -100,13 +114,39 @@ export default function App() {
   };
 
   /* ── Delete ── */
-  const del = async (id) => {
-    await fetch(`${API}/api/items/${id}`, {
+  const del = async () => {
+    if (!deleteModal) return;
+    
+    await fetch(`${API}/api/items/${deleteModal.id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
-    setItems(p => p.filter(i => i._id !== id));
+    setItems(p => p.filter(i => i._id !== deleteModal.id));
+    setDeleteModal(null);
   };
+  /* ── Renew ── */
+const renew = async (id) => {
+  try {
+    const res = await fetch(`${API}/api/items/${id}/renew`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok) {
+      // Update the item in the list
+      setItems(p => p.map(item => 
+        item._id === id ? data.item : item
+      ));
+    } else {
+      alert(data.message || "Failed to renew item");
+    }
+  } catch (error) {
+    console.error("Renew error:", error);
+    alert("Error renewing item");
+  }
+};
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -202,6 +242,24 @@ export default function App() {
           transition: .2s;
         }
         .btn-logout:hover { border-color: #A94040; color: #A94040; }
+
+        /* ── Notification Banner ── */
+        .notification-banner {
+          background: #FEF3E8;
+          border: 1px solid #C2752A;
+          border-radius: 10px;
+          padding: 15px 20px;
+          margin-bottom: 20px;
+          color: #C2752A;
+        }
+        .notification-banner strong {
+          display: block;
+          margin-bottom: 5px;
+        }
+        .notification-banner p {
+          font-size: 13px;
+          margin: 0;
+        }
 
         /* ── Stats ── */
         .stats {
@@ -416,6 +474,16 @@ export default function App() {
           <button className="btn-logout" onClick={logout}>Log out</button>
         </div>
 
+        {/* Notification Banner */}
+        {notifications.length > 0 && (
+          <div className="notification-banner">
+            <strong>⏰ {notifications.length} subscription{notifications.length !== 1 ? "s" : ""} expiring soon!</strong>
+            <p>
+              {notifications.map(n => n.name).join(", ")}
+            </p>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="stats">
           {[
@@ -496,8 +564,13 @@ export default function App() {
                 <div className="c-price">₹{item.cost}/month</div>
 
                 <div className="actions">
-                  <button className="btn-r" onClick={() => {}}>↻ Renew</button>
-                  <button className="btn-d" onClick={() => del(item._id)}>Remove</button>
+                  <button className="btn-r" onClick={() => renew(item._id)}>↻ Renew</button>
+                  <button 
+                    className="btn-d" 
+                    onClick={() => setDeleteModal({ id: item._id, name: item.name })}
+                  >
+                    Remove
+                  </button>
                 </div>
               </div>
             );
@@ -505,6 +578,59 @@ export default function App() {
         </div>
 
       </div>
+
+      {/* Delete Modal */}
+      {deleteModal && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: "#fff",
+            padding: "30px",
+            borderRadius: "10px",
+            textAlign: "center",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.3)"
+          }}>
+            <h3>Delete "{deleteModal.name}"?</h3>
+            <p style={{ color: "#666", marginBottom: "20px" }}>
+              This cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button 
+                onClick={() => setDeleteModal(null)}
+                style={{
+                  padding: "10px 20px",
+                  background: "#ddd",
+                  border: "none",
+                  borderRadius: "5px",
+                  cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={del}
+                style={{
+                  padding: "10px 20px",
+                  background: "#A94040",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "5px",
+                  cursor: "pointer"
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -50,36 +50,10 @@ router.get("/", protect, async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    for (let item of items) {
-
-      if (item.validityType === "renewal") {
-
-        let validTill = new Date(item.validTill);
-        validTill.setHours(0, 0, 0, 0);
-
-        while (validTill < today) {
-
-          if (item.renewalCycle === "monthly") {
-            validTill.setMonth(validTill.getMonth() + 1);
-          } 
-          else if (item.renewalCycle === "yearly") {
-            validTill.setFullYear(validTill.getFullYear() + 1);
-          } 
-          else {
-            break;
-          }
-        }
-
-        if (validTill.getTime() !== new Date(item.validTill).getTime()) {
-          item.validTill = validTill;
-          await item.save();
-        }
-      }
-    }
-
     const updatedItems = items.map(item => {
-
       const validTill = new Date(item.validTill);
+      validTill.setHours(0, 0, 0, 0);
+
       const reminderDate = new Date(validTill);
       reminderDate.setDate(validTill.getDate() - item.reminderDays);
 
@@ -104,7 +78,6 @@ router.get("/", protect, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-
 
 /*
   🔔 Get Items Needing Reminder
