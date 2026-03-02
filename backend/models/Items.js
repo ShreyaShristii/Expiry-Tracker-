@@ -15,6 +15,7 @@ const itemSchema = new mongoose.Schema(
 
     category: {
       type: String,
+      enum: ["OTT", "Grocery", "Medicine", "Document", "Gadget"],
       required: true
     },
 
@@ -43,6 +44,28 @@ const itemSchema = new mongoose.Schema(
     cost: {
       type: Number,
       default: 0
+    },
+
+    // 🆕 NEW FIELDS FOR DIFFERENT CATEGORIES
+    quantity: {
+      type: Number,
+      default: 1
+    },
+
+    dosage: {
+      type: String
+    },
+
+    documentType: {
+      type: String
+    },
+
+    warrantyEndDate: {
+      type: Date
+    },
+
+    guaranteeEndDate: {
+      type: Date
     },
 
     notes: {

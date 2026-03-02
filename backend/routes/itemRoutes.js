@@ -17,7 +17,12 @@ router.post("/", protect, async (req, res) => {
       reminderDays,
       cost,
       notes,
-      renewalCycle
+      renewalCycle,
+      quantity,           // NEW
+      dosage,             // NEW
+      documentType,       // NEW
+      warrantyEndDate,    // NEW
+      guaranteeEndDate    // NEW
     } = req.body;
 
     const item = await Item.create({
@@ -29,7 +34,12 @@ router.post("/", protect, async (req, res) => {
       reminderDays,
       cost,
       notes,
-      renewalCycle
+      renewalCycle,
+      quantity,           // NEW
+      dosage,             // NEW
+      documentType,       // NEW
+      warrantyEndDate,    // NEW
+      guaranteeEndDate    // NEW
     });
 
     res.status(201).json(item);
@@ -38,8 +48,6 @@ router.post("/", protect, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-
-
 /*
   🥈 Get All Items (Auto-Renew + Status)
 */
@@ -271,16 +279,20 @@ router.put("/:id", protect, async (req, res) => {
     if (!item) return res.status(404).json({ message: "Item not found" });
 
     const allowed = [
-      "name",
-      "category",
-      "validTill",
-      "reminderDays",
-      "cost",
-      "notes",
-      "renewalCycle",
-      "validityType"
-    ];
-
+  "name",
+  "category",
+  "validTill",
+  "reminderDays",
+  "cost",
+  "notes",
+  "renewalCycle",
+  "validityType",
+  "quantity",           
+  "dosage",             
+  "documentType",       
+  "warrantyEndDate",    
+  "guaranteeEndDate"    
+];
     allowed.forEach(key => {
       if (req.body[key] !== undefined) item[key] = req.body[key];
     });
