@@ -5,9 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const STATUS = {
-  Active:          { color: "#10B981", bg: "#D1FAE5" },
-  "Expiring Soon": { color: "#F59E0B", bg: "#FEF3C7" },
-  Expired:         { color: "#EF4444", bg: "#FEE2E2" },
+  Active:          { color: "#853953", bg: "#F3F0F2" },
+  "Expiring Soon": { color: "#612D53", bg: "#F8F5F7" },
+  Expired:         { color: "#2C2C2C", bg: "#F5F5F5" },
 };
 
 const calcDaysLeft = (date) => Math.ceil((new Date(date) - Date.now()) / 864e5);
@@ -19,23 +19,88 @@ const calcStatus   = (date) => {
 };
 
 const CATEGORIES = {
-  OTT: { color: "#E50914", icon: "📺" },
-  Grocery: { color: "#16A34A", icon: "🛒" },
-  Medicine: { color: "#EC4899", icon: "💊" },
-  Document: { color: "#3B82F6", icon: "📄" },
-  Gadget: { color: "#8B5CF6", icon: "⚙️" },
+  OTT: { color: "#853953", icon: "📺" },
+  Grocery: { color: "#612D53", icon: "🛒" },
+  Medicine: { color: "#853953", icon: "💊" },
+  Document: { color: "#612D53", icon: "📄" },
+  Gadget: { color: "#2C2C2C", icon: "⚙️" },
+};
+
+const CATEGORY_CONTENT = {
+  OTT: {
+    title: "OTT Subscriptions",
+    problem: "Paying for subscriptions you forgot about? Overlapping streaming services?",
+    benefits: [
+      "Track all your streaming subscriptions in one place",
+      "Get reminded before renewal dates",
+      "See total monthly spending on entertainment",
+      "Never pay for unused subscriptions again"
+    ],
+    story: "Sarah was paying for 5 streaming services she forgot about. Lost ₹2,400/month. Now she tracks and saves ₹1,500 monthly.",
+    icon: "📺"
+  },
+  Grocery: {
+    title: "Grocery Items",
+    problem: "Spoiled food in your fridge? Wasting money on expired groceries?",
+    benefits: [
+      "Monitor expiry dates of fresh produce",
+      "Reduce food waste at home",
+      "Plan meals better with expiry tracking",
+      "Save money on wasted groceries"
+    ],
+    story: "Rajesh wasted ₹3,000/month on expired items. With tracking, he reduced waste by 70% and feeds his family better.",
+    icon: "🛒"
+  },
+  Medicine: {
+    title: "Medicines",
+    problem: "Used expired medicine? Missed medication doses? Health at risk?",
+    benefits: [
+      "Never use expired medicine accidentally",
+      "Track prescription expiry dates",
+      "Remember dosage schedules easily",
+      "Protect your family's health"
+    ],
+    story: "Priya's mother took expired medicine causing side effects. Now she tracks all medicines and ensures family safety.",
+    icon: "💊"
+  },
+  Document: {
+    title: "Documents & Licenses",
+    problem: "Expired passport? License expired at traffic stop? Legal trouble?",
+    benefits: [
+      "Track passport validity dates",
+      "Get reminders for license renewal",
+      "Never miss important document deadlines",
+      "Avoid legal complications"
+    ],
+    story: "Amit missed his visa renewal and faced visa denial. Now he tracks all documents and never misses deadlines.",
+    icon: "📄"
+  },
+  Gadget: {
+    title: "Gadget Warranty",
+    problem: "Gadget breaks after warranty expires? Lose ₹20,000+ repairs?",
+    benefits: [
+      "Track warranty end dates exactly",
+      "Plan repairs before warranty expires",
+      "Know guarantee coverage period",
+      "Save on unexpected repair costs"
+    ],
+    story: "Neha's laptop screen broke 10 days after warranty ended. Cost ₹15,000. Now she tracks warranties and plans ahead.",
+    icon: "⚙️"
+  }
 };
 
 const getBrand = (name, cat) => {
   const n = name.toLowerCase();
   if (cat && CATEGORIES[cat]) return CATEGORIES[cat].color;
-  return "#6366F1";
+  return "#2C2C2C";
 };
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [mode,  setMode]  = useState("login");
   const [page, setPage] = useState("home");
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryInfo, setCategoryInfo] = useState(null);
   const [items, setItems] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
@@ -60,8 +125,13 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
-    if (token) localStorage.setItem("token", token);
-    else localStorage.removeItem("token");
+    if (token) {
+      localStorage.setItem("token", token);
+      setPage("home");
+    } else {
+      localStorage.removeItem("token");
+      //setPage("login");
+    }
   }, [token]);
 
   useEffect(() => {
@@ -72,11 +142,14 @@ export default function App() {
 
   useEffect(() => {
     if (!token) return;
-    fetch(`${API}/api/notifications`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(data => setNotifications(data.data || []))
-      .catch(console.error);
-  }, [token, items]);
+    const interval = setInterval(() => {
+      fetch(`${API}/api/notifications`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(data => setNotifications(data.data || []))
+        .catch(console.error);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [token]);
 
   const resetCategoryFields = () => {
     setQuantity("");
@@ -125,6 +198,7 @@ export default function App() {
       setReminderDays("7");
       setRenewalCycle("monthly");
       resetCategoryFields();
+      setAddError("");
     } else {
       setAddError(data?.message || "Something went wrong.");
     }
@@ -162,14 +236,33 @@ export default function App() {
     setToken(null);
     setItems([]);
     setMode("login");
-    setPage("home");
-    window.location.reload();
+    setPage("login");
+    setSelectedCategory(null);
+    setCategoryInfo(null);
+    setSidebarOpen(true);
   };
 
   const handleLogin = (t) => {
     localStorage.setItem("token", t);
     setToken(t);
-    setPage("home");
+    setMode("login");
+  };
+
+  const handleSidebarNav = (pageId) => {
+    setPage(pageId);
+    setSelectedCategory(null);
+    setCategoryInfo(null);
+  };
+
+  const handleCategoryClick = (catName) => {
+    setCategoryInfo(catName);
+    setPage("category-info");
+  };
+
+  const handleGetStarted = (catName) => {
+    setCategory(catName);
+    setPage("dashboard");
+    resetCategoryFields();
   };
 
   if (!token) {
@@ -178,28 +271,27 @@ export default function App() {
       : <Signup   onLogin={handleLogin} switchMode={() => setMode("login")}  />;
   }
 
-  const filtered = useMemo(() =>
-    items
-      .filter(i => {
-        const ok1 = i.name.toLowerCase().includes(search.toLowerCase());
-        const ok2 = filter === "All" || calcStatus(i.validTill) === filter;
-        return ok1 && ok2;
-      })
-      .sort((a, b) => new Date(a.validTill) - new Date(b.validTill)),
-  [items, search, filter]);
+  const filtered = useMemo(() => {
+    let result = items.filter(i => {
+      const ok1 = i.name.toLowerCase().includes(search.toLowerCase());
+      const ok2 = filter === "All" || calcStatus(i.validTill) === filter;
+      const ok3 = !selectedCategory || i.category === selectedCategory;
+      return ok1 && ok2 && ok3;
+    });
+    return result.sort((a, b) => new Date(a.validTill) - new Date(b.validTill));
+  }, [items, search, filter, selectedCategory]);
 
   const groupedByCategory = useMemo(() => {
     const groups = {};
-    filtered.forEach(item => {
+    items.forEach(item => {
       const cat = item.category && CATEGORIES[item.category] ? item.category : "Miscellaneous";
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push(item);
     });
     return groups;
-  }, [filtered]);
+  }, [items]);
 
-  const categoryOrder = ["OTT", "Grocery", "Medicine", "Document", "Gadget", "Miscellaneous"];
-  const sortedCategories = categoryOrder.filter(cat => groupedByCategory[cat]);
+  const categoryOrder = ["OTT", "Grocery", "Medicine", "Document", "Gadget"];
 
   const counts = {
     total:   items.length,
@@ -211,33 +303,31 @@ export default function App() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-          background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #312E81 100%);
-          font-family: 'Inter', sans-serif;
-          color: #1F2937;
+          background: #F3F0F2;
+          font-family: 'DM Sans', sans-serif;
+          color: #2C2C2C;
           min-height: 100vh;
         }
 
         .app-container {
           display: flex;
           height: 100vh;
-          background: #F9FAFB;
+          background: #F3F0F2;
         }
 
-        /* NAVBAR */
         .navbar {
-          background: linear-gradient(90deg, #6366F1 0%, #8B5CF6 100%);
-          color: white;
-          padding: 0 24px;
+          background: #FFFFFF;
+          border-bottom: 1px solid #E8E3E8;
+          padding: 0 40px;
           height: 64px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
           position: fixed;
           top: 0;
           left: 0;
@@ -248,56 +338,71 @@ export default function App() {
         .navbar-left {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 24px;
         }
 
         .nav-toggle {
           background: none;
           border: none;
-          color: white;
+          color: #2C2C2C;
           font-size: 20px;
           cursor: pointer;
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .nav-toggle {
+            display: block;
+          }
         }
 
         .navbar-logo {
-          font-family: 'Playfair Display', serif;
-          font-size: 20px;
-          font-weight: 600;
+          font-size: 18px;
+          font-weight: 700;
+          color: #2C2C2C;
+          letter-spacing: -0.3px;
+          cursor: pointer;
+          transition: color 0.2s;
+        }
+
+        .navbar-logo:hover {
+          color: #853953;
         }
 
         .navbar-right {
           display: flex;
           align-items: center;
-          gap: 20px;
+          gap: 24px;
         }
 
         .btn-logout {
-          background: rgba(255,255,255,0.2);
-          border: 1px solid rgba(255,255,255,0.3);
-          color: white;
-          padding: 8px 16px;
-          border-radius: 8px;
-          font-size: 13px;
+          background: #853953;
+          border: none;
+          color: #FFFFFF;
+          padding: 10px 20px;
+          border-radius: 4px;
+          font-size: 12px;
           cursor: pointer;
-          transition: .2s;
+          font-weight: 600;
+          transition: all 0.2s;
         }
 
         .btn-logout:hover {
-          background: rgba(255,255,255,0.3);
+          background: #612D53;
         }
 
-        /* SIDEBAR */
         .sidebar {
-          width: 240px;
-          background: white;
-          border-right: 1px solid #E5E7EB;
+          width: 220px;
+          background: #FFFFFF;
+          border-right: 1px solid #E8E3E8;
           padding: 80px 0 24px 0;
           position: fixed;
           left: 0;
           top: 0;
           height: 100vh;
           overflow-y: auto;
-          transition: transform 0.3s;
+          transition: transform 0.3s ease;
+          z-index: 99;
         }
 
         .sidebar.closed {
@@ -309,105 +414,156 @@ export default function App() {
           align-items: center;
           gap: 12px;
           padding: 12px 20px;
-          margin: 4px 8px;
-          border-radius: 8px;
+          margin: 4px 12px;
+          border-radius: 4px;
           cursor: pointer;
-          transition: all .2s;
-          font-size: 14px;
-          color: #6B7280;
+          transition: all 0.2s;
+          font-size: 13px;
+          color: #8B8B8B;
           border: none;
           background: none;
-          width: calc(100% - 16px);
+          width: calc(100% - 24px);
           text-align: left;
+          font-weight: 500;
         }
 
         .sidebar-item:hover {
-          background: #F3F4F6;
-          color: #6366F1;
+          background: #F8F5F7;
+          color: #2C2C2C;
         }
 
         .sidebar-item.active {
-          background: linear-gradient(90deg, #6366F1 0%, #8B5CF6 100%);
-          color: white;
+          background: #853953;
+          color: #FFFFFF;
         }
 
-        /* MAIN */
         .main-content {
           flex: 1;
-          margin-left: 240px;
+          margin-left: 220px;
           margin-top: 64px;
           overflow-y: auto;
-          background: #F9FAFB;
+          background: #F3F0F2;
+          transition: margin-left 0.3s ease;
         }
 
-        .main-content.full {
-          margin-left: 0;
+        @media (max-width: 768px) {
+          .main-content {
+            margin-left: 0;
+          }
         }
 
         .content-wrapper {
-          padding: 32px;
-          max-width: 1200px;
+          padding: 48px 56px;
+          max-width: 1400px;
           margin: 0 auto;
         }
 
         .page-title {
-          font-family: 'Playfair Display', serif;
           font-size: 32px;
-          font-weight: 600;
-          color: #111827;
+          font-weight: 700;
+          color: #2C2C2C;
           margin-bottom: 8px;
+          letter-spacing: -0.5px;
         }
 
         .page-subtitle {
           font-size: 14px;
-          color: #6B7280;
-          margin-bottom: 32px;
+          color: #A0A0A0;
+          margin-bottom: 40px;
+          font-weight: 400;
         }
 
-        /* STATS */
         .stats {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
           gap: 16px;
-          margin-bottom: 32px;
+          margin-bottom: 40px;
         }
 
         .stat-card {
-          background: white;
-          border-radius: 12px;
-          padding: 20px;
-          border-left: 4px solid var(--color);
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          background: #FFFFFF;
+          border: 1px solid #E8E3E8;
+          border-radius: 4px;
+          padding: 24px;
+          transition: all 0.2s;
+        }
+
+        .stat-card:hover {
+          border-color: #853953;
         }
 
         .stat-number {
           font-size: 28px;
           font-weight: 700;
-          color: var(--color);
+          color: #853953;
           margin-bottom: 4px;
         }
 
         .stat-label {
-          font-size: 12px;
-          color: #9CA3AF;
+          font-size: 11px;
+          color: #A0A0A0;
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          font-weight: 600;
         }
 
-        /* FORM */
+        .category-buttons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          margin-bottom: 24px;
+        }
+
+        .category-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 16px;
+          background: #FFFFFF;
+          border: 1px solid #E8E3E8;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 600;
+          color: #2C2C2C;
+          transition: all 0.2s;
+        }
+
+        .category-btn:hover {
+          border-color: #853953;
+          background: #F8F5F7;
+        }
+
+        .category-btn.active {
+          background: #853953;
+          color: #FFFFFF;
+          border-color: #853953;
+        }
+
+        .category-btn-icon {
+          font-size: 14px;
+        }
+
+        .category-btn-count {
+          font-size: 10px;
+          opacity: 0.7;
+        }
+
         .form-card {
-          background: white;
-          border-radius: 12px;
+          background: #FFFFFF;
+          border: 1px solid #E8E3E8;
+          border-radius: 4px;
           padding: 24px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
           margin-bottom: 24px;
         }
 
         .form-title {
-          font-size: 16px;
-          font-weight: 600;
-          color: #111827;
-          margin-bottom: 16px;
+          font-size: 14px;
+          font-weight: 700;
+          color: #2C2C2C;
+          margin-bottom: 20px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .form-row {
@@ -420,276 +576,378 @@ export default function App() {
         input, select {
           flex: 1;
           min-width: 120px;
-          padding: 10px 12px;
-          border: 1px solid #E5E7EB;
-          border-radius: 8px;
-          font-family: 'Inter', sans-serif;
+          padding: 12px;
+          border: 1px solid #E8E3E8;
+          border-radius: 4px;
+          font-family: 'DM Sans', sans-serif;
           font-size: 13px;
-          color: #111827;
+          color: #2C2C2C;
           outline: none;
-          transition: border-color .2s;
+          transition: all 0.2s;
+          background: #FFFFFF;
         }
 
         input:focus, select:focus {
-          border-color: #6366F1;
-          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+          border-color: #853953;
+          box-shadow: 0 0 0 2px rgba(133, 57, 83, 0.1);
         }
 
         input::placeholder {
-          color: #9CA3AF;
+          color: #D0D0D0;
         }
 
         .btn-add {
-          padding: 10px 24px;
-          background: linear-gradient(90deg, #6366F1 0%, #8B5CF6 100%);
+          padding: 12px 28px;
+          background: #853953;
           border: none;
-          border-radius: 8px;
-          color: white;
+          border-radius: 4px;
+          color: #FFFFFF;
           font-weight: 600;
-          font-size: 13px;
+          font-size: 12px;
           cursor: pointer;
           white-space: nowrap;
-          transition: .2s;
+          transition: all 0.2s;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .btn-add:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+          background: #612D53;
         }
 
         .form-error {
-          color: #EF4444;
+          color: #853953;
           font-size: 12px;
-          margin-top: 8px;
+          margin-top: 10px;
+          font-weight: 500;
         }
 
-        /* CATEGORIES SECTION */
-        .category-section {
-          margin-bottom: 40px;
-        }
-
-        .category-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
-          border-bottom: 2px solid #E5E7EB;
-        }
-
-        .category-icon {
-          font-size: 24px;
-        }
-
-        .category-title {
-          font-size: 18px;
-          font-weight: 600;
-          color: #111827;
-        }
-
-        .category-count {
-          margin-left: auto;
-          font-size: 12px;
-          color: #9CA3AF;
-          background: #F3F4F6;
-          padding: 4px 10px;
-          border-radius: 20px;
-        }
-
-        /* GRID */
         .grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-          gap: 16px;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 20px;
         }
 
         .card {
-          background: white;
-          border-radius: 12px;
-          padding: 20px;
-          border-left: 4px solid var(--brand);
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          transition: .2s;
+          background: #FFFFFF;
+          border: 1px solid #E8E3E8;
+          border-left: 3px solid var(--brand);
+          border-radius: 4px;
+          padding: 24px;
+          transition: all 0.2s;
         }
 
         .card:hover {
-          box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-          transform: translateY(-2px);
+          border-color: #853953;
+          box-shadow: 0 8px 24px rgba(133, 57, 83, 0.08);
         }
 
         .c-icon {
           font-size: 24px;
-          margin-bottom: 8px;
+          margin-bottom: 12px;
+          display: block;
         }
 
         .c-name {
-          font-size: 16px;
-          font-weight: 600;
-          color: #111827;
+          font-size: 15px;
+          font-weight: 700;
+          color: #2C2C2C;
           margin-bottom: 2px;
         }
 
         .c-cat {
-          font-size: 11px;
-          color: #9CA3AF;
+          font-size: 10px;
+          color: #A0A0A0;
           text-transform: uppercase;
-          margin-bottom: 12px;
+          margin-bottom: 14px;
+          letter-spacing: 0.3px;
+          font-weight: 600;
         }
 
         .badge {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          padding: 4px 10px;
-          border-radius: 20px;
+          padding: 5px 10px;
+          border-radius: 2px;
           font-size: 11px;
-          font-weight: 600;
-          margin-bottom: 10px;
+          font-weight: 700;
+          margin-bottom: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
         }
 
         .c-days {
           font-size: 13px;
-          font-weight: 600;
-          color: #6B7280;
+          font-weight: 700;
+          color: #2C2C2C;
           margin-bottom: 12px;
         }
 
         .c-info {
           font-size: 12px;
-          color: #9CA3AF;
-          margin-bottom: 4px;
+          color: #A0A0A0;
+          margin-bottom: 6px;
         }
 
         .actions {
           display: flex;
-          gap: 8px;
-          margin-top: 12px;
+          gap: 10px;
+          margin-top: 16px;
         }
 
         .btn-action {
           flex: 1;
-          padding: 8px;
-          border: 1px solid #E5E7EB;
-          background: white;
-          border-radius: 6px;
-          font-size: 12px;
+          padding: 10px;
+          border: 1px solid #E8E3E8;
+          background: #FFFFFF;
+          border-radius: 4px;
+          font-size: 11px;
           font-weight: 600;
           cursor: pointer;
-          transition: .2s;
-          color: #6B7280;
+          transition: all 0.2s;
+          color: #2C2C2C;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
         }
 
         .btn-action:hover {
-          border-color: #6366F1;
-          color: #6366F1;
-          background: #F9FAFB;
+          border-color: #853953;
+          background: #F8F5F7;
         }
 
         .btn-delete {
-          padding: 8px 12px;
-          border: 1px solid #FEE2E2;
-          background: white;
-          border-radius: 6px;
-          color: #9CA3AF;
+          padding: 10px 12px;
+          border: 1px solid #E8E3E8;
+          background: #FFFFFF;
+          border-radius: 4px;
+          color: #A0A0A0;
           cursor: pointer;
-          font-size: 12px;
-          transition: .2s;
+          font-size: 11px;
+          font-weight: 600;
+          transition: all 0.2s;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
         }
 
         .btn-delete:hover {
-          border-color: #EF4444;
-          color: #EF4444;
+          border-color: #853953;
+          color: #853953;
+          background: #F8F5F7;
         }
 
         .empty {
           text-align: center;
-          padding: 48px 24px;
-          color: #9CA3AF;
+          padding: 60px 24px;
+          color: #A0A0A0;
+          font-size: 14px;
         }
 
-        /* HOME PAGE */
         .home-hero {
-          background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
-          color: white;
-          padding: 60px 32px;
-          border-radius: 16px;
-          margin-bottom: 40px;
+          background: linear-gradient(135deg, #853953 0%, #612D53 100%);
+          color: #FFFFFF;
+          padding: 80px 48px;
+          border-radius: 4px;
+          margin-bottom: 60px;
           text-align: center;
         }
 
         .home-hero h1 {
-          font-family: 'Playfair Display', serif;
-          font-size: 40px;
-          margin-bottom: 12px;
+          font-size: 48px;
+          margin-bottom: 16px;
+          font-weight: 700;
+          letter-spacing: -1px;
         }
 
         .home-hero p {
           font-size: 16px;
           opacity: 0.9;
-          max-width: 500px;
+          max-width: 700px;
           margin: 0 auto;
+          line-height: 1.6;
+          font-weight: 400;
         }
 
         .feature-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 20px;
-          margin-bottom: 40px;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 24px;
+          margin-bottom: 48px;
         }
 
         .feature-card {
-          background: white;
-          padding: 24px;
-          border-radius: 12px;
+          background: #FFFFFF;
+          padding: 32px;
+          border: 1px solid #E8E3E8;
+          border-radius: 4px;
           text-align: center;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          transition: all 0.2s;
+          cursor: pointer;
+        }
+
+        .feature-card:hover {
+          border-color: #853953;
+          box-shadow: 0 8px 24px rgba(133, 57, 83, 0.08);
+          transform: translateY(-2px);
         }
 
         .feature-icon {
           font-size: 40px;
-          margin-bottom: 12px;
+          margin-bottom: 16px;
+          display: block;
         }
 
         .feature-title {
-          font-weight: 600;
-          color: #111827;
+          font-weight: 700;
+          color: #2C2C2C;
           margin-bottom: 8px;
+          font-size: 14px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .feature-text {
           font-size: 13px;
-          color: #6B7280;
+          color: #A0A0A0;
+          line-height: 1.5;
         }
 
-        /* ABOUT PAGE */
         .about-section {
-          background: white;
-          padding: 24px;
-          border-radius: 12px;
+          background: #FFFFFF;
+          padding: 32px;
+          border: 1px solid #E8E3E8;
+          border-radius: 4px;
           margin-bottom: 24px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .about-section h2 {
-          color: #111827;
-          margin-bottom: 12px;
-          font-size: 18px;
+          color: #2C2C2C;
+          margin-bottom: 14px;
+          font-size: 14px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .about-section p {
-          color: #6B7280;
+          color: #666666;
           line-height: 1.6;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
+          font-size: 13px;
         }
 
-        /* MODAL */
+        /* CATEGORY INFO PAGE */
+        .category-hero {
+          background: linear-gradient(135deg, var(--brand-color) 0%, rgba(97, 45, 83, 0.8) 100%);
+          color: #FFFFFF;
+          padding: 80px 48px;
+          border-radius: 4px;
+          margin-bottom: 48px;
+          text-align: center;
+        }
+
+        .category-hero h1 {
+          font-size: 44px;
+          margin-bottom: 16px;
+          font-weight: 700;
+          letter-spacing: -1px;
+        }
+
+        .category-hero-icon {
+          font-size: 60px;
+          margin-bottom: 24px;
+        }
+
+        .category-hero p {
+          font-size: 18px;
+          opacity: 0.95;
+          max-width: 700px;
+          margin: 0 auto;
+          line-height: 1.6;
+        }
+
+        .benefits-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 20px;
+          margin-bottom: 48px;
+        }
+
+        .benefit-card {
+          background: #FFFFFF;
+          padding: 28px;
+          border: 1px solid #E8E3E8;
+          border-radius: 4px;
+          border-left: 3px solid var(--brand-color);
+        }
+
+        .benefit-card h3 {
+          font-size: 14px;
+          color: #2C2C2C;
+          margin-bottom: 10px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .benefit-card p {
+          font-size: 13px;
+          color: #666666;
+          line-height: 1.5;
+        }
+
+        .story-card {
+          background: #FFFFFF;
+          padding: 32px;
+          border: 1px solid #E8E3E8;
+          border-radius: 4px;
+          margin-bottom: 32px;
+        }
+
+        .story-card h2 {
+          font-size: 14px;
+          color: #2C2C2C;
+          margin-bottom: 16px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .story-card p {
+          font-size: 14px;
+          color: #666666;
+          line-height: 1.6;
+          font-style: italic;
+        }
+
+        .get-started-btn {
+          width: 100%;
+          padding: 16px;
+          background: var(--brand-color);
+          color: #FFFFFF;
+          border: none;
+          border-radius: 4px;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          transition: all 0.2s;
+          margin-bottom: 48px;
+        }
+
+        .get-started-btn:hover {
+          opacity: 0.9;
+          transform: translateY(-2px);
+        }
+
         .modal-overlay {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0,0,0,0.5);
+          background: rgba(44, 44, 44, 0.4);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -697,23 +955,27 @@ export default function App() {
         }
 
         .modal {
-          background: white;
-          padding: 32px;
-          border-radius: 12px;
-          max-width: 400px;
+          background: #FFFFFF;
+          padding: 40px;
+          border-radius: 4px;
+          max-width: 420px;
           width: 100%;
           text-align: center;
+          border: 1px solid #E8E3E8;
         }
 
         .modal h3 {
-          color: #111827;
+          color: #2C2C2C;
           margin-bottom: 12px;
+          font-size: 16px;
+          font-weight: 700;
         }
 
         .modal p {
-          color: #6B7280;
-          margin-bottom: 24px;
-          font-size: 14px;
+          color: #666666;
+          margin-bottom: 28px;
+          font-size: 13px;
+          line-height: 1.5;
         }
 
         .modal-actions {
@@ -723,23 +985,48 @@ export default function App() {
 
         .modal-actions button {
           flex: 1;
-          padding: 10px;
-          border: 1px solid #E5E7EB;
-          background: white;
-          border-radius: 8px;
+          padding: 12px;
+          border: 1px solid #E8E3E8;
+          background: #FFFFFF;
+          border-radius: 4px;
           cursor: pointer;
           font-weight: 600;
-          transition: .2s;
+          font-size: 12px;
+          transition: all 0.2s;
+          color: #2C2C2C;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
         }
 
         .modal-actions button:last-child {
-          background: #EF4444;
-          color: white;
-          border-color: #EF4444;
+          background: #853953;
+          color: #FFFFFF;
+          border-color: #853953;
         }
 
         .modal-actions button:last-child:hover {
-          background: #DC2626;
+          background: #612D53;
+        }
+
+        .modal-actions button:first-child:hover {
+          background: #F8F5F7;
+        }
+
+        ::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+          background: #F3F0F2;
+        }
+
+        ::-webkit-scrollbar-thumb {
+          background: #D8D3D8;
+          border-radius: 2px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+          background: #C0B5C0;
         }
       `}</style>
 
@@ -748,10 +1035,10 @@ export default function App() {
         <div className="navbar">
           <div className="navbar-left">
             <button className="nav-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
-            <div className="navbar-logo">✨ Expiry Tracker</div>
+            <div className="navbar-logo" onClick={() => handleSidebarNav("home")}>Expiry Tracker</div>
           </div>
           <div className="navbar-right">
-            <button className="btn-logout" onClick={logout}>Log out</button>
+            <button className="btn-logout" onClick={logout}>Logout</button>
           </div>
         </div>
 
@@ -768,10 +1055,7 @@ export default function App() {
             <button
               key={item.id}
               className={`sidebar-item ${page === item.id ? 'active' : ''}`}
-              onClick={() => {
-                setPage(item.id);
-                setSidebarOpen(false);
-              }}
+              onClick={() => handleSidebarNav(item.id)}
             >
               <span>{item.icon}</span>
               {item.label}
@@ -787,45 +1071,58 @@ export default function App() {
             {page === "home" && (
               <>
                 <div className="home-hero">
-                  <h1>Welcome to Expiry Tracker</h1>
-                  <p>Never miss an expiration date again. Track subscriptions, groceries, medicines, documents, and warranties all in one place.</p>
+                  <h1>Expiry Tracker</h1>
+                  <p>Never miss an important date. Track subscriptions, groceries, medicines, documents, and warranties in one elegant interface.</p>
                 </div>
 
                 <div className="feature-grid">
-                  <div className="feature-card">
-                    <div className="feature-icon">📺</div>
-                    <div className="feature-title">OTT Subscriptions</div>
-                    <div className="feature-text">Track Netflix, Spotify, and other subscriptions</div>
-                  </div>
-                  <div className="feature-card">
-                    <div className="feature-icon">🛒</div>
-                    <div className="feature-title">Grocery Items</div>
-                    <div className="feature-text">Keep track of grocery expiry dates</div>
-                  </div>
-                  <div className="feature-card">
-                    <div className="feature-icon">💊</div>
-                    <div className="feature-title">Medicines</div>
-                    <div className="feature-text">Never use expired medicines</div>
-                  </div>
-                  <div className="feature-card">
-                    <div className="feature-icon">📄</div>
-                    <div className="feature-title">Documents</div>
-                    <div className="feature-text">Track passport and license validity</div>
-                  </div>
-                  <div className="feature-card">
-                    <div className="feature-icon">⚙️</div>
-                    <div className="feature-title">Gadget Warranty</div>
-                    <div className="feature-text">Monitor warranty and guarantee periods</div>
-                  </div>
-                  <div className="feature-card">
-                    <div className="feature-icon">🔔</div>
-                    <div className="feature-title">Smart Alerts</div>
-                    <div className="feature-text">Get notified before things expire</div>
-                  </div>
+                  {Object.entries(CATEGORY_CONTENT).map(([key, content]) => (
+                    <div 
+                      key={key}
+                      className="feature-card" 
+                      onClick={() => handleCategoryClick(key)}
+                    >
+                      <div className="feature-icon">{content.icon}</div>
+                      <div className="feature-title">{content.title}</div>
+                      <div className="feature-text">Click to learn how we solve everyday problems</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* CATEGORY INFO PAGE */}
+            {page === "category-info" && categoryInfo && (
+              <>
+                <div 
+                  className="category-hero"
+                  style={{"--brand-color": CATEGORIES[categoryInfo]?.color}}
+                >
+                  <div className="category-hero-icon">{CATEGORY_CONTENT[categoryInfo].icon}</div>
+                  <h1>{CATEGORY_CONTENT[categoryInfo].title}</h1>
+                  <p>"{CATEGORY_CONTENT[categoryInfo].problem}"</p>
                 </div>
 
-                <button className="btn-add" onClick={() => setPage("dashboard")} style={{width: '100%', padding: '12px'}}>
-                  Start Tracking →
+                <div className="benefits-grid">
+                  {CATEGORY_CONTENT[categoryInfo].benefits.map((benefit, idx) => (
+                    <div key={idx} className="benefit-card" style={{"--brand-color": CATEGORIES[categoryInfo]?.color}}>
+                      <h3>✓ Benefit {idx + 1}</h3>
+                      <p>{benefit}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="story-card">
+                  <h2>Real Story</h2>
+                  <p>"{CATEGORY_CONTENT[categoryInfo].story}"</p>
+                </div>
+
+                <button 
+                  className="get-started-btn"
+                  style={{background: CATEGORIES[categoryInfo]?.color}}
+                  onClick={() => handleGetStarted(categoryInfo)}
+                >
+                  Get Started Now
                 </button>
               </>
             )}
@@ -834,45 +1131,40 @@ export default function App() {
             {page === "dashboard" && (
               <>
                 <div className="page-title">Dashboard</div>
-                <div className="page-subtitle">Quick overview of your items</div>
+                <div className="page-subtitle">Overview of your tracked items</div>
 
                 <div className="stats">
-                  <div className="stat-card" style={{"--color": "#10B981"}}>
+                  <div className="stat-card">
                     <div className="stat-number">{counts.total}</div>
                     <div className="stat-label">Total Items</div>
                   </div>
-                  <div className="stat-card" style={{"--color": "#10B981"}}>
+                  <div className="stat-card">
                     <div className="stat-number">{counts.active}</div>
                     <div className="stat-label">Active</div>
                   </div>
-                  <div className="stat-card" style={{"--color": "#F59E0B"}}>
+                  <div className="stat-card">
                     <div className="stat-number">{counts.soon}</div>
                     <div className="stat-label">Expiring Soon</div>
                   </div>
-                  <div className="stat-card" style={{"--color": "#EF4444"}}>
+                  <div className="stat-card">
                     <div className="stat-number">{counts.expired}</div>
                     <div className="stat-label">Expired</div>
                   </div>
                 </div>
 
                 {notifications.length > 0 && (
-                  <div className="form-card" style={{background: '#FEF3C7', borderLeft: '4px solid #F59E0B'}}>
-                    <strong>⏰ {notifications.length} item{notifications.length !== 1 ? "s" : ""} expiring soon!</strong>
-                    <p style={{marginTop: '8px', color: '#92400E', fontSize: '13px'}}>
+                  <div className="form-card" style={{background: '#F8F5F7', borderLeft: '3px solid #612D53'}}>
+                    <strong style={{color: '#612D53'}}>⚠ {notifications.length} item{notifications.length !== 1 ? "s" : ""} expiring soon!</strong>
+                    <p style={{marginTop: '10px', color: '#A0A0A0', fontSize: '12px'}}>
                       {notifications.map(n => n.name).join(", ")}
                     </p>
                   </div>
                 )}
-              </>
-            )}
 
-            {/* ADD ITEMS PAGE */}
-            {page === "dashboard" && (
-              <>
                 <div className="form-card">
-                  <div className="form-title">Add New Item</div>
+                  <div className="form-title">Add Item</div>
                   <div className="form-row">
-                    <input placeholder="Name" value={name} onChange={e => setName(e.target.value)} />
+                    <input placeholder="Item Name" value={name} onChange={e => setName(e.target.value)} />
                     <select value={category} onChange={e => {setCategory(e.target.value); resetCategoryFields();}}>
                       <option value="OTT">📺 OTT</option>
                       <option value="Grocery">🛒 Grocery</option>
@@ -900,23 +1192,23 @@ export default function App() {
                   </div>
 
                   {(category === "Grocery" || category === "Medicine" || category === "Document" || category === "Gadget") && (
-                    <div className="form-row" style={{marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #E5E7EB'}}>
+                    <div className="form-row" style={{marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #E8E3E8'}}>
                       {category === "Grocery" && <input type="number" placeholder="Quantity" value={quantity} onChange={e => setQuantity(e.target.value)} />}
                       {category === "Medicine" && <input placeholder="Dosage (e.g., 500mg)" value={dosage} onChange={e => setDosage(e.target.value)} />}
                       {category === "Document" && <input placeholder="Type (e.g., Passport)" value={documentType} onChange={e => setDocumentType(e.target.value)} />}
                       {category === "Gadget" && (
                         <>
-                          <input type="date" value={warrantyEndDate} onChange={e => setWarrantyEndDate(e.target.value)} placeholder="Warranty" />
-                          <input type="date" value={guaranteeEndDate} onChange={e => setGuaranteeEndDate(e.target.value)} placeholder="Guarantee" />
+                          <input type="date" value={warrantyEndDate} onChange={e => setWarrantyEndDate(e.target.value)} />
+                          <input type="date" value={guaranteeEndDate} onChange={e => setGuaranteeEndDate(e.target.value)} />
                         </>
                       )}
                     </div>
                   )}
 
-                  <div className="form-row" style={{marginTop: '12px'}}>
-                    <button className="btn-add" onClick={add}>Add Item</button>
+                  <div className="form-row" style={{marginTop: '16px'}}>
+                    <button className="btn-add" onClick={add}>Add</button>
                   </div>
-                  {addError && <div className="form-error">⚠ {addError}</div>}
+                  {addError && <div className="form-error">✕ {addError}</div>}
                 </div>
               </>
             )}
@@ -925,12 +1217,12 @@ export default function App() {
             {page === "items" && (
               <>
                 <div className="page-title">My Items</div>
-                <div className="page-subtitle">All your tracked items</div>
+                <div className="page-subtitle">Filter by category to view specific items</div>
 
                 <div className="form-card">
                   <div className="form-row">
-                    <input placeholder="Search items..." value={search} onChange={e => setSearch(e.target.value)} style={{flex: 1}} />
-                    <select value={filter} onChange={e => setFilter(e.target.value)} style={{flex: 0.3}}>
+                    <input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{flex: 1}} />
+                    <select value={filter} onChange={e => setFilter(e.target.value)} style={{flex: '0 0 140px'}}>
                       <option>All</option>
                       <option>Active</option>
                       <option>Expiring Soon</option>
@@ -939,55 +1231,74 @@ export default function App() {
                   </div>
                 </div>
 
+                <div className="form-card">
+                  <div style={{fontSize: '12px', fontWeight: '600', color: '#A0A0A0', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px'}}>Filter by Category</div>
+                  <div className="category-buttons">
+                    <button 
+                      className={`category-btn ${!selectedCategory ? 'active' : ''}`}
+                      onClick={() => setSelectedCategory(null)}
+                    >
+                      <span>All</span>
+                      <span className="category-btn-count">({items.length})</span>
+                    </button>
+                    {categoryOrder.map(cat => {
+                      const count = groupedByCategory[cat]?.length || 0;
+                      if (count === 0) return null;
+                      return (
+                        <button
+                          key={cat}
+                          className={`category-btn ${selectedCategory === cat ? 'active' : ''}`}
+                          onClick={() => setSelectedCategory(cat)}
+                        >
+                          <span className="category-btn-icon">{CATEGORIES[cat]?.icon}</span>
+                          <span>{cat}</span>
+                          <span className="category-btn-count">({count})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {filtered.length === 0 ? (
-                  <div className="empty">No items found.</div>
+                  <div className="empty">No items in this category</div>
                 ) : (
-                  sortedCategories.map(category => (
-                    <div key={category} className="category-section">
-                      <div className="category-header">
-                        <span className="category-icon">{CATEGORIES[category]?.icon || "📦"}</span>
-                        <span className="category-title">{category}</span>
-                        <span className="category-count">{groupedByCategory[category].length} items</span>
-                      </div>
-                      <div className="grid">
-                        {groupedByCategory[category].map(item => {
-                          const status = calcStatus(item.validTill);
-                          const s = STATUS[status];
-                          const brand = getBrand(item.name, item.category);
-                          const daysLeft = calcDaysLeft(item.validTill);
+                  <div className="grid">
+                    {filtered.map(item => {
+                      const status = calcStatus(item.validTill);
+                      const s = STATUS[status];
+                      const brand = getBrand(item.name, item.category);
+                      const daysLeft = calcDaysLeft(item.validTill);
 
-                          return (
-                            <div key={item._id} className="card" style={{"--brand": brand}}>
-                              <div className="c-icon">{CATEGORIES[item.category]?.icon || "📦"}</div>
-                              <div className="c-name">{item.name}</div>
-                              <div className="c-cat">{item.category || "—"}</div>
+                      return (
+                        <div key={item._id} className="card" style={{"--brand": brand}}>
+                          <span className="c-icon">{CATEGORIES[item.category]?.icon}</span>
+                          <div className="c-name">{item.name}</div>
+                          <div className="c-cat">{item.category}</div>
 
-                              <div className="badge" style={{background: s.bg, color: s.color}}>
-                                {status}
-                              </div>
+                          <div className="badge" style={{background: s.bg, color: s.color}}>
+                            {status}
+                          </div>
 
-                              <div className="c-days">
-                                {daysLeft >= 0
-                                  ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left`
-                                  : `${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? "s" : ""} overdue`}
-                              </div>
+                          <div className="c-days">
+                            {daysLeft >= 0
+                              ? `${daysLeft} days left`
+                              : `${Math.abs(daysLeft)} days overdue`}
+                          </div>
 
-                              {item.quantity && <div className="c-info">📦 Qty: {item.quantity}</div>}
-                              {item.dosage && <div className="c-info">💊 {item.dosage}</div>}
-                              {item.documentType && <div className="c-info">📄 {item.documentType}</div>}
-                              {item.warrantyEndDate && <div className="c-info">⚙️ Warranty: {new Date(item.warrantyEndDate).toLocaleDateString()}</div>}
-                              {item.guaranteeEndDate && <div className="c-info">✓ Guarantee: {new Date(item.guaranteeEndDate).toLocaleDateString()}</div>}
+                          {item.quantity && <div className="c-info">📦 {item.quantity} qty</div>}
+                          {item.dosage && <div className="c-info">💊 {item.dosage}</div>}
+                          {item.documentType && <div className="c-info">📄 {item.documentType}</div>}
+                          {item.warrantyEndDate && <div className="c-info">⚙️ {new Date(item.warrantyEndDate).toLocaleDateString()}</div>}
+                          {item.guaranteeEndDate && <div className="c-info">✓ {new Date(item.guaranteeEndDate).toLocaleDateString()}</div>}
 
-                              <div className="actions">
-                                <button className="btn-action" onClick={() => renew(item._id)}>↻ Renew</button>
-                                <button className="btn-delete" onClick={() => setDeleteModal({id: item._id, name: item.name})}>Remove</button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))
+                          <div className="actions">
+                            <button className="btn-action" onClick={() => renew(item._id)}>Renew</button>
+                            <button className="btn-delete" onClick={() => setDeleteModal({id: item._id, name: item.name})}>Remove</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </>
             )}
@@ -999,19 +1310,19 @@ export default function App() {
                 <div className="page-subtitle">Detailed breakdown of your items</div>
 
                 <div className="stats">
-                  <div className="stat-card" style={{"--color": "#6366F1"}}>
+                  <div className="stat-card">
                     <div className="stat-number">{counts.total}</div>
                     <div className="stat-label">Total Items</div>
                   </div>
-                  <div className="stat-card" style={{"--color": "#10B981"}}>
+                  <div className="stat-card">
                     <div className="stat-number">{counts.active}</div>
                     <div className="stat-label">Active</div>
                   </div>
-                  <div className="stat-card" style={{"--color": "#F59E0B"}}>
+                  <div className="stat-card">
                     <div className="stat-number">{counts.soon}</div>
                     <div className="stat-label">Expiring Soon</div>
                   </div>
-                  <div className="stat-card" style={{"--color": "#EF4444"}}>
+                  <div className="stat-card">
                     <div className="stat-number">{counts.expired}</div>
                     <div className="stat-label">Expired</div>
                   </div>
@@ -1024,7 +1335,7 @@ export default function App() {
                       <div key={cat} className="feature-card">
                         <div className="feature-icon">{data.icon}</div>
                         <div className="feature-title">{cat}</div>
-                        <div style={{fontSize: '24px', fontWeight: '700', color: data.color, marginTop: '8px'}}>{count}</div>
+                        <div style={{fontSize: '24px', fontWeight: '700', color: data.color, marginTop: '12px'}}>{count}</div>
                       </div>
                     );
                   })}
@@ -1035,28 +1346,28 @@ export default function App() {
             {/* ABOUT PAGE */}
             {page === "about" && (
               <>
-                <div className="page-title">About Expiry Tracker</div>
-                <div className="page-subtitle">Learn more about our service</div>
+                <div className="page-title">About</div>
+                <div className="page-subtitle">Learn more about Expiry Tracker</div>
 
                 <div className="about-section">
                   <h2>What is Expiry Tracker?</h2>
-                  <p>Expiry Tracker is your personal assistant to never forget expiration dates. Whether it's your favorite streaming service, groceries, medicines, important documents, or gadget warranties—we've got you covered.</p>
+                  <p>Expiry Tracker helps you manage all important dates in your life. Track subscriptions, groceries, medicines, documents, and warranties with smart reminders and elegant simplicity.</p>
                 </div>
 
                 <div className="about-section">
-                  <h2>Key Features</h2>
-                  <p>✨ Track multiple categories of items</p>
-                  <p>📲 Smart notifications before items expire</p>
-                  <p>📊 Detailed statistics and insights</p>
-                  <p>🔄 Automatic renewal tracking</p>
-                  <p>💾 Secure cloud storage</p>
+                  <h2>Features</h2>
+                  <p>✓ Multi-category tracking system</p>
+                  <p>✓ Smart reminders before expiry</p>
+                  <p>✓ Detailed statistics and insights</p>
+                  <p>✓ Secure cloud storage</p>
+                  <p>✓ Clean, minimal interface</p>
                 </div>
 
                 <div className="about-section">
-                  <h2>Contact & Support</h2>
+                  <h2>Support</h2>
                   <p>Email: support@expirytracker.com</p>
                   <p>Version: 1.0.0</p>
-                  <p>© 2024 Expiry Tracker. All rights reserved.</p>
+                  <p>© 2024 Expiry Tracker</p>
                 </div>
               </>
             )}
@@ -1068,20 +1379,20 @@ export default function App() {
                 <div className="page-subtitle">Manage your preferences</div>
 
                 <div className="about-section">
-                  <h2>Notification Settings</h2>
-                  <p>Default reminder days: 7 days before expiry</p>
-                  <p style={{marginTop: '12px', fontSize: '12px', color: '#9CA3AF'}}>Customize individual reminders for each item from the Items page</p>
+                  <h2>Notifications</h2>
+                  <p>Default reminder: 7 days before expiry</p>
+                  <p style={{marginTop: '8px', fontSize: '12px', color: '#A0A0A0'}}>Customize individual reminders for each item</p>
                 </div>
 
                 <div className="about-section">
                   <h2>Account</h2>
-                  <p>Theme: Dark Mode with Purple/Blue Gradient</p>
-                  <p>Storage: Cloud (MongoDB)</p>
+                  <p>Theme: Burgundy & Plum</p>
+                  <p>Storage: Secure Cloud</p>
                 </div>
 
                 <div className="about-section">
                   <h2>Privacy</h2>
-                  <p>Your data is encrypted and secure. We never share your information with third parties.</p>
+                  <p>Your data is encrypted and never shared with third parties. Your privacy is our priority.</p>
                 </div>
               </>
             )}
