@@ -5,9 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const STATUS = {
-  Active:          { color: "#853953", bg: "#F3F0F2" },
-  "Expiring Soon": { color: "#612D53", bg: "#F8F5F7" },
-  Expired:         { color: "#2C2C2C", bg: "#F5F5F5" },
+  Active:          { color: "#853953", bg: "#FCF1F6" },
+  "Expiring Soon": { color: "#D97706", bg: "#FFFBEB" },
+  Expired:         { color: "#DC2626", bg: "#FEF2F2" },
 };
 
 const calcDaysLeft = (date) => Math.ceil((new Date(date) - Date.now()) / 864e5);
@@ -20,10 +20,10 @@ const calcStatus   = (date) => {
 
 const CATEGORIES = {
   OTT: { color: "#853953", icon: "📺" },
-  Grocery: { color: "#612D53", icon: "🛒" },
-  Medicine: { color: "#853953", icon: "💊" },
-  Document: { color: "#612D53", icon: "📄" },
-  Gadget: { color: "#2C2C2C", icon: "⚙️" },
+  Grocery: { color: "#10B981", icon: "🛒" },
+  Medicine: { color: "#F59E0B", icon: "💊" },
+  Document: { color: "#3B82F6", icon: "📄" },
+  Gadget: { color: "#8B5CF6", icon: "⚙️" },
 };
 
 const CATEGORY_CONTENT = {
@@ -92,7 +92,7 @@ const CATEGORY_CONTENT = {
 const getBrand = (name, cat) => {
   const n = name.toLowerCase();
   if (cat && CATEGORIES[cat]) return CATEGORIES[cat].color;
-  return "#2C2C2C";
+  return "#8B5CF6";
 };
 
 export default function App() {
@@ -130,7 +130,6 @@ export default function App() {
       setPage("home");
     } else {
       localStorage.removeItem("token");
-      //setPage("login");
     }
   }, [token]);
 
@@ -303,12 +302,12 @@ export default function App() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap');
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-          background: #F3F0F2;
+          background: #F9F7F5;
           font-family: 'DM Sans', sans-serif;
           color: #2C2C2C;
           min-height: 100vh;
@@ -317,14 +316,14 @@ export default function App() {
         .app-container {
           display: flex;
           height: 100vh;
-          background: #F3F0F2;
+          background: #F9F7F5;
         }
 
         .navbar {
           background: #FFFFFF;
-          border-bottom: 1px solid #E8E3E8;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.05);
           padding: 0 40px;
-          height: 64px;
+          height: 70px;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -348,6 +347,11 @@ export default function App() {
           font-size: 20px;
           cursor: pointer;
           display: none;
+          transition: color 0.2s;
+        }
+
+        .nav-toggle:hover {
+          color: #853953;
         }
 
         @media (max-width: 768px) {
@@ -357,10 +361,11 @@ export default function App() {
         }
 
         .navbar-logo {
-          font-size: 18px;
+          font-family: 'Playfair Display', serif;
+          font-size: 20px;
           font-weight: 700;
           color: #2C2C2C;
-          letter-spacing: -0.3px;
+          letter-spacing: -0.5px;
           cursor: pointer;
           transition: color 0.2s;
         }
@@ -376,26 +381,29 @@ export default function App() {
         }
 
         .btn-logout {
-          background: #853953;
+          background: linear-gradient(135deg, #853953 0%, #612D53 100%);
           border: none;
           color: #FFFFFF;
-          padding: 10px 20px;
-          border-radius: 4px;
+          padding: 11px 24px;
+          border-radius: 6px;
           font-size: 12px;
           cursor: pointer;
           font-weight: 600;
-          transition: all 0.2s;
+          transition: all 0.3s;
+          letter-spacing: 0.3px;
+          text-transform: uppercase;
         }
 
         .btn-logout:hover {
-          background: #612D53;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(133, 57, 83, 0.25);
         }
 
         .sidebar {
-          width: 220px;
+          width: 240px;
           background: #FFFFFF;
-          border-right: 1px solid #E8E3E8;
-          padding: 80px 0 24px 0;
+          box-shadow: 2px 0 12px rgba(0,0,0,0.03);
+          padding: 90px 0 24px 0;
           position: fixed;
           left: 0;
           top: 0;
@@ -413,9 +421,9 @@ export default function App() {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 12px 20px;
-          margin: 4px 12px;
-          border-radius: 4px;
+          padding: 13px 20px;
+          margin: 6px 12px;
+          border-radius: 6px;
           cursor: pointer;
           transition: all 0.2s;
           font-size: 13px;
@@ -428,21 +436,22 @@ export default function App() {
         }
 
         .sidebar-item:hover {
-          background: #F8F5F7;
+          background: #F5F1ED;
           color: #2C2C2C;
         }
 
         .sidebar-item.active {
-          background: #853953;
+          background: linear-gradient(135deg, #853953 0%, #612D53 100%);
           color: #FFFFFF;
+          box-shadow: 0 2px 8px rgba(133, 57, 83, 0.2);
         }
 
         .main-content {
           flex: 1;
-          margin-left: 220px;
-          margin-top: 64px;
+          margin-left: 240px;
+          margin-top: 70px;
           overflow-y: auto;
-          background: #F3F0F2;
+          background: #F9F7F5;
           transition: margin-left 0.3s ease;
         }
 
@@ -453,55 +462,62 @@ export default function App() {
         }
 
         .content-wrapper {
-          padding: 48px 56px;
+          padding: 56px 60px;
           max-width: 1400px;
           margin: 0 auto;
         }
 
         .page-title {
-          font-size: 32px;
+          font-family: 'Playfair Display', serif;
+          font-size: 36px;
           font-weight: 700;
           color: #2C2C2C;
-          margin-bottom: 8px;
-          letter-spacing: -0.5px;
+          margin-bottom: 10px;
+          letter-spacing: -0.6px;
         }
 
         .page-subtitle {
           font-size: 14px;
-          color: #A0A0A0;
-          margin-bottom: 40px;
+          color: #999;
+          margin-bottom: 48px;
           font-weight: 400;
         }
 
         .stats {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 16px;
-          margin-bottom: 40px;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 20px;
+          margin-bottom: 48px;
         }
 
         .stat-card {
           background: #FFFFFF;
-          border: 1px solid #E8E3E8;
-          border-radius: 4px;
-          padding: 24px;
-          transition: all 0.2s;
+          border: 1px solid #F0E8E3;
+          border-radius: 8px;
+          padding: 28px;
+          transition: all 0.3s;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
 
         .stat-card:hover {
-          border-color: #853953;
+          border-color: #E0D5CC;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+          transform: translateY(-2px);
         }
 
         .stat-number {
-          font-size: 28px;
+          font-size: 32px;
           font-weight: 700;
-          color: #853953;
-          margin-bottom: 4px;
+          background: linear-gradient(135deg, #853953 0%, #612D53 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          margin-bottom: 8px;
         }
 
         .stat-label {
           font-size: 11px;
-          color: #A0A0A0;
+          color: #999;
           text-transform: uppercase;
           letter-spacing: 0.5px;
           font-weight: 600;
@@ -520,8 +536,8 @@ export default function App() {
           gap: 8px;
           padding: 10px 16px;
           background: #FFFFFF;
-          border: 1px solid #E8E3E8;
-          border-radius: 4px;
+          border: 1.5px solid #F0E8E3;
+          border-radius: 6px;
           cursor: pointer;
           font-size: 12px;
           font-weight: 600;
@@ -531,13 +547,14 @@ export default function App() {
 
         .category-btn:hover {
           border-color: #853953;
-          background: #F8F5F7;
+          background: #FCF1F6;
         }
 
         .category-btn.active {
-          background: #853953;
+          background: linear-gradient(135deg, #853953 0%, #612D53 100%);
           color: #FFFFFF;
           border-color: #853953;
+          box-shadow: 0 2px 8px rgba(133, 57, 83, 0.2);
         }
 
         .category-btn-icon {
@@ -551,10 +568,11 @@ export default function App() {
 
         .form-card {
           background: #FFFFFF;
-          border: 1px solid #E8E3E8;
-          border-radius: 4px;
-          padding: 24px;
+          border: 1px solid #F0E8E3;
+          border-radius: 8px;
+          padding: 28px;
           margin-bottom: 24px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
 
         .form-title {
@@ -576,9 +594,9 @@ export default function App() {
         input, select {
           flex: 1;
           min-width: 120px;
-          padding: 12px;
-          border: 1px solid #E8E3E8;
-          border-radius: 4px;
+          padding: 12px 14px;
+          border: 1.5px solid #F0E8E3;
+          border-radius: 6px;
           font-family: 'DM Sans', sans-serif;
           font-size: 13px;
           color: #2C2C2C;
@@ -589,7 +607,7 @@ export default function App() {
 
         input:focus, select:focus {
           border-color: #853953;
-          box-shadow: 0 0 0 2px rgba(133, 57, 83, 0.1);
+          box-shadow: 0 0 0 3px rgba(133, 57, 83, 0.08);
         }
 
         input::placeholder {
@@ -598,52 +616,60 @@ export default function App() {
 
         .btn-add {
           padding: 12px 28px;
-          background: #853953;
+          background: linear-gradient(135deg, #853953 0%, #612D53 100%);
           border: none;
-          border-radius: 4px;
+          border-radius: 6px;
           color: #FFFFFF;
           font-weight: 600;
           font-size: 12px;
           cursor: pointer;
           white-space: nowrap;
-          transition: all 0.2s;
+          transition: all 0.3s;
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          box-shadow: 0 2px 8px rgba(133, 57, 83, 0.15);
         }
 
         .btn-add:hover {
-          background: #612D53;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(133, 57, 83, 0.25);
         }
 
         .form-error {
-          color: #853953;
+          color: #DC2626;
           font-size: 12px;
           margin-top: 10px;
           font-weight: 500;
+          background: #FEF2F2;
+          padding: 10px 14px;
+          border-radius: 6px;
+          border-left: 3px solid #DC2626;
         }
 
         .grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 24px;
         }
 
         .card {
           background: #FFFFFF;
-          border: 1px solid #E8E3E8;
-          border-left: 3px solid var(--brand);
-          border-radius: 4px;
+          border: 1.5px solid #F0E8E3;
+          border-left: 4px solid var(--brand);
+          border-radius: 8px;
           padding: 24px;
-          transition: all 0.2s;
+          transition: all 0.3s;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
 
         .card:hover {
-          border-color: #853953;
-          box-shadow: 0 8px 24px rgba(133, 57, 83, 0.08);
+          border-color: #E0D5CC;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+          transform: translateY(-4px);
         }
 
         .c-icon {
-          font-size: 24px;
+          font-size: 28px;
           margin-bottom: 12px;
           display: block;
         }
@@ -652,12 +678,12 @@ export default function App() {
           font-size: 15px;
           font-weight: 700;
           color: #2C2C2C;
-          margin-bottom: 2px;
+          margin-bottom: 4px;
         }
 
         .c-cat {
           font-size: 10px;
-          color: #A0A0A0;
+          color: #999;
           text-transform: uppercase;
           margin-bottom: 14px;
           letter-spacing: 0.3px;
@@ -668,8 +694,8 @@ export default function App() {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          padding: 5px 10px;
-          border-radius: 2px;
+          padding: 6px 12px;
+          border-radius: 4px;
           font-size: 11px;
           font-weight: 700;
           margin-bottom: 12px;
@@ -686,7 +712,7 @@ export default function App() {
 
         .c-info {
           font-size: 12px;
-          color: #A0A0A0;
+          color: #888;
           margin-bottom: 6px;
         }
 
@@ -699,9 +725,9 @@ export default function App() {
         .btn-action {
           flex: 1;
           padding: 10px;
-          border: 1px solid #E8E3E8;
+          border: 1.5px solid #F0E8E3;
           background: #FFFFFF;
-          border-radius: 4px;
+          border-radius: 6px;
           font-size: 11px;
           font-weight: 600;
           cursor: pointer;
@@ -713,15 +739,16 @@ export default function App() {
 
         .btn-action:hover {
           border-color: #853953;
-          background: #F8F5F7;
+          background: #FCF1F6;
+          color: #853953;
         }
 
         .btn-delete {
           padding: 10px 12px;
-          border: 1px solid #E8E3E8;
+          border: 1.5px solid #F0E8E3;
           background: #FFFFFF;
-          border-radius: 4px;
-          color: #A0A0A0;
+          border-radius: 6px;
+          color: #999;
           cursor: pointer;
           font-size: 11px;
           font-weight: 600;
@@ -731,28 +758,30 @@ export default function App() {
         }
 
         .btn-delete:hover {
-          border-color: #853953;
-          color: #853953;
-          background: #F8F5F7;
+          border-color: #DC2626;
+          color: #DC2626;
+          background: #FEF2F2;
         }
 
         .empty {
           text-align: center;
-          padding: 60px 24px;
-          color: #A0A0A0;
+          padding: 80px 24px;
+          color: #999;
           font-size: 14px;
         }
 
         .home-hero {
           background: linear-gradient(135deg, #853953 0%, #612D53 100%);
           color: #FFFFFF;
-          padding: 80px 48px;
-          border-radius: 4px;
+          padding: 96px 56px;
+          border-radius: 8px;
           margin-bottom: 60px;
           text-align: center;
+          box-shadow: 0 8px 32px rgba(133, 57, 83, 0.15);
         }
 
         .home-hero h1 {
+          font-family: 'Playfair Display', serif;
           font-size: 48px;
           margin-bottom: 16px;
           font-weight: 700;
@@ -777,22 +806,23 @@ export default function App() {
 
         .feature-card {
           background: #FFFFFF;
-          padding: 32px;
-          border: 1px solid #E8E3E8;
-          border-radius: 4px;
+          padding: 36px;
+          border: 1px solid #F0E8E3;
+          border-radius: 8px;
           text-align: center;
-          transition: all 0.2s;
+          transition: all 0.3s;
           cursor: pointer;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
 
         .feature-card:hover {
           border-color: #853953;
-          box-shadow: 0 8px 24px rgba(133, 57, 83, 0.08);
-          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(133, 57, 83, 0.1);
+          transform: translateY(-6px);
         }
 
         .feature-icon {
-          font-size: 40px;
+          font-size: 44px;
           margin-bottom: 16px;
           display: block;
         }
@@ -808,16 +838,17 @@ export default function App() {
 
         .feature-text {
           font-size: 13px;
-          color: #A0A0A0;
+          color: #888;
           line-height: 1.5;
         }
 
         .about-section {
           background: #FFFFFF;
-          padding: 32px;
-          border: 1px solid #E8E3E8;
-          border-radius: 4px;
+          padding: 36px;
+          border: 1px solid #F0E8E3;
+          border-radius: 8px;
           margin-bottom: 24px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
 
         .about-section h2 {
@@ -830,23 +861,24 @@ export default function App() {
         }
 
         .about-section p {
-          color: #666666;
+          color: #666;
           line-height: 1.6;
           margin-bottom: 10px;
           font-size: 13px;
         }
 
-        /* CATEGORY INFO PAGE */
         .category-hero {
           background: linear-gradient(135deg, var(--brand-color) 0%, rgba(97, 45, 83, 0.8) 100%);
           color: #FFFFFF;
-          padding: 80px 48px;
-          border-radius: 4px;
+          padding: 96px 56px;
+          border-radius: 8px;
           margin-bottom: 48px;
           text-align: center;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.12);
         }
 
         .category-hero h1 {
+          font-family: 'Playfair Display', serif;
           font-size: 44px;
           margin-bottom: 16px;
           font-weight: 700;
@@ -854,7 +886,7 @@ export default function App() {
         }
 
         .category-hero-icon {
-          font-size: 60px;
+          font-size: 64px;
           margin-bottom: 24px;
         }
 
@@ -868,17 +900,18 @@ export default function App() {
 
         .benefits-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+          gap: 24px;
           margin-bottom: 48px;
         }
 
         .benefit-card {
           background: #FFFFFF;
-          padding: 28px;
-          border: 1px solid #E8E3E8;
-          border-radius: 4px;
-          border-left: 3px solid var(--brand-color);
+          padding: 32px;
+          border: 1px solid #F0E8E3;
+          border-radius: 8px;
+          border-left: 4px solid var(--brand-color);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
 
         .benefit-card h3 {
@@ -892,16 +925,17 @@ export default function App() {
 
         .benefit-card p {
           font-size: 13px;
-          color: #666666;
+          color: #666;
           line-height: 1.5;
         }
 
         .story-card {
           background: #FFFFFF;
-          padding: 32px;
-          border: 1px solid #E8E3E8;
-          border-radius: 4px;
+          padding: 36px;
+          border: 1px solid #F0E8E3;
+          border-radius: 8px;
           margin-bottom: 32px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
 
         .story-card h2 {
@@ -915,7 +949,7 @@ export default function App() {
 
         .story-card p {
           font-size: 14px;
-          color: #666666;
+          color: #666;
           line-height: 1.6;
           font-style: italic;
         }
@@ -926,19 +960,20 @@ export default function App() {
           background: var(--brand-color);
           color: #FFFFFF;
           border: none;
-          border-radius: 4px;
+          border-radius: 6px;
           font-size: 14px;
           font-weight: 700;
           cursor: pointer;
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          transition: all 0.2s;
+          transition: all 0.3s;
           margin-bottom: 48px;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.12);
         }
 
         .get-started-btn:hover {
-          opacity: 0.9;
           transform: translateY(-2px);
+          box-shadow: 0 6px 24px rgba(0,0,0,0.16);
         }
 
         .modal-overlay {
@@ -947,7 +982,7 @@ export default function App() {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(44, 44, 44, 0.4);
+          background: rgba(44, 44, 44, 0.5);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -956,12 +991,13 @@ export default function App() {
 
         .modal {
           background: #FFFFFF;
-          padding: 40px;
-          border-radius: 4px;
+          padding: 48px;
+          border-radius: 8px;
           max-width: 420px;
           width: 100%;
           text-align: center;
-          border: 1px solid #E8E3E8;
+          border: 1px solid #F0E8E3;
+          box-shadow: 0 16px 48px rgba(0,0,0,0.15);
         }
 
         .modal h3 {
@@ -972,7 +1008,7 @@ export default function App() {
         }
 
         .modal p {
-          color: #666666;
+          color: #666;
           margin-bottom: 28px;
           font-size: 13px;
           line-height: 1.5;
@@ -986,9 +1022,9 @@ export default function App() {
         .modal-actions button {
           flex: 1;
           padding: 12px;
-          border: 1px solid #E8E3E8;
+          border: 1.5px solid #F0E8E3;
           background: #FFFFFF;
-          border-radius: 4px;
+          border-radius: 6px;
           cursor: pointer;
           font-weight: 600;
           font-size: 12px;
@@ -999,17 +1035,19 @@ export default function App() {
         }
 
         .modal-actions button:last-child {
-          background: #853953;
+          background: linear-gradient(135deg, #853953 0%, #612D53 100%);
           color: #FFFFFF;
           border-color: #853953;
+          box-shadow: 0 2px 8px rgba(133, 57, 83, 0.15);
         }
 
         .modal-actions button:last-child:hover {
-          background: #612D53;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(133, 57, 83, 0.25);
         }
 
         .modal-actions button:first-child:hover {
-          background: #F8F5F7;
+          background: #F5F1ED;
         }
 
         ::-webkit-scrollbar {
@@ -1017,7 +1055,7 @@ export default function App() {
         }
 
         ::-webkit-scrollbar-track {
-          background: #F3F0F2;
+          background: #F9F7F5;
         }
 
         ::-webkit-scrollbar-thumb {
@@ -1153,9 +1191,9 @@ export default function App() {
                 </div>
 
                 {notifications.length > 0 && (
-                  <div className="form-card" style={{background: '#F8F5F7', borderLeft: '3px solid #612D53'}}>
-                    <strong style={{color: '#612D53'}}>⚠ {notifications.length} item{notifications.length !== 1 ? "s" : ""} expiring soon!</strong>
-                    <p style={{marginTop: '10px', color: '#A0A0A0', fontSize: '12px'}}>
+                  <div className="form-card" style={{borderLeft: '4px solid #D97706', background: '#FFFBEB'}}>
+                    <strong style={{color: '#92400E'}}>⚠ {notifications.length} item{notifications.length !== 1 ? "s" : ""} expiring soon!</strong>
+                    <p style={{marginTop: '10px', color: '#999', fontSize: '12px'}}>
                       {notifications.map(n => n.name).join(", ")}
                     </p>
                   </div>
@@ -1192,7 +1230,7 @@ export default function App() {
                   </div>
 
                   {(category === "Grocery" || category === "Medicine" || category === "Document" || category === "Gadget") && (
-                    <div className="form-row" style={{marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #E8E3E8'}}>
+                    <div className="form-row" style={{marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #F0E8E3'}}>
                       {category === "Grocery" && <input type="number" placeholder="Quantity" value={quantity} onChange={e => setQuantity(e.target.value)} />}
                       {category === "Medicine" && <input placeholder="Dosage (e.g., 500mg)" value={dosage} onChange={e => setDosage(e.target.value)} />}
                       {category === "Document" && <input placeholder="Type (e.g., Passport)" value={documentType} onChange={e => setDocumentType(e.target.value)} />}
@@ -1208,7 +1246,7 @@ export default function App() {
                   <div className="form-row" style={{marginTop: '16px'}}>
                     <button className="btn-add" onClick={add}>Add</button>
                   </div>
-                  {addError && <div className="form-error">✕ {addError}</div>}
+                  {addError && <div className="form-error">{addError}</div>}
                 </div>
               </>
             )}
@@ -1232,7 +1270,7 @@ export default function App() {
                 </div>
 
                 <div className="form-card">
-                  <div style={{fontSize: '12px', fontWeight: '600', color: '#A0A0A0', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px'}}>Filter by Category</div>
+                  <div style={{fontSize: '12px', fontWeight: '600', color: '#999', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px'}}>Filter by Category</div>
                   <div className="category-buttons">
                     <button 
                       className={`category-btn ${!selectedCategory ? 'active' : ''}`}
@@ -1381,7 +1419,7 @@ export default function App() {
                 <div className="about-section">
                   <h2>Notifications</h2>
                   <p>Default reminder: 7 days before expiry</p>
-                  <p style={{marginTop: '8px', fontSize: '12px', color: '#A0A0A0'}}>Customize individual reminders for each item</p>
+                  <p style={{marginTop: '8px', fontSize: '12px', color: '#999'}}>Customize individual reminders for each item</p>
                 </div>
 
                 <div className="about-section">
