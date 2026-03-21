@@ -1,19 +1,21 @@
-const express = require("express");
+\const express = require("express");
 const mongoose = require("mongoose");
-const notificationRoutes = require("./routes/notificationRoutes");
 const cors = require("cors");
 require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
 const itemRoutes = require("./routes/itemRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 const protect = require("./middleware/authMiddleware");
 
 const app = express();
 
 /* ───────────── Middlewares ───────────── */
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  credentials: true
+}));
 app.use(express.json());
-app.use("/api/notifications", notificationRoutes);
 
 /* ───────────── MongoDB ───────────── */
 mongoose
@@ -28,6 +30,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/items", itemRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/api/protected", protect, (req, res) => {
   res.json({
