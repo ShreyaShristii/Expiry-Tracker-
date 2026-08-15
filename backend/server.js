@@ -18,10 +18,21 @@ app.use(cors({
 app.use(express.json());
 
 /* ───────────── MongoDB ───────────── */
+// Connect to MongoDB first, then start the server so queries don't buffer
 mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected Successfully"))
-  .catch((err) => console.log("MongoDB Connection Error:", err));
+  .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 })
+  .then(() => {
+    console.log("MongoDB Connected Successfully");
+
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("MongoDB Connection Error:", err);
+    process.exit(1);
+  });
 
 /* ───────────── Routes ───────────── */
 app.get("/", (req, res) => {
@@ -39,8 +50,4 @@ app.get("/api/protected", protect, (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Server is started after MongoDB connects above

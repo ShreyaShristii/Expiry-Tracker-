@@ -5,13 +5,19 @@ export default function Signup({ onLogin, switchMode }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const signup = async () => {
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !confirmPassword) {
       setError("Please fill in all fields.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
     setLoading(true);
@@ -28,7 +34,8 @@ export default function Signup({ onLogin, switchMode }) {
     setLoading(false);
     if (res.ok) {
       localStorage.setItem("token", data.token);
-      onLogin(data.token);
+      // redirect user directly to dashboard after signup
+      onLogin(data.token, "dashboard");
     } else {
       setError(data.message || "Signup failed. Try again.");
     }
@@ -477,6 +484,29 @@ export default function Signup({ onLogin, switchMode }) {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && signup()}
+                  disabled={loading}
+                  style={{ paddingRight: "40px" }}
+                />
+                <button
+                  className="toggle-password"
+                  onClick={() => setShowPassword(!showPassword)}
+                  type="button"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="form-field">
+              <label className="form-label">Confirm Password</label>
+              <div className="password-input-wrapper">
+                <input
+                  className="form-input"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Re-enter password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && signup()}
                   disabled={loading}
                   style={{ paddingRight: "40px" }}

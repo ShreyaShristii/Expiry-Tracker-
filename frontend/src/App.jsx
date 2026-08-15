@@ -97,6 +97,7 @@ const getBrand = (name, cat) => {
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
+  const [userName, setUserName] = useState("");
   const [mode,  setMode]  = useState("login");
   const [page, setPage] = useState("home");
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -127,25 +128,56 @@ export default function App() {
   useEffect(() => {
     if (token) {
       localStorage.setItem("token", token);
-      setPage("home");
     } else {
       localStorage.removeItem("token");
     }
   }, [token]);
 
   useEffect(() => {
-    if (!token) { setItems([]); return; }
+    if (!token) { setItems([]); setUserName(""); return; }
+
+    // fetch current user's profile (name) and items in parallel
+    fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (r.ok && d?.user) setUserName(d.user.name || "");
+        else setUserName("");
+      })
+      .catch(() => setUserName(""));
+
     fetch(`${API}/api/items`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(setItems).catch(console.error);
+      .then(async (r) => {
+        const data = await r.json().catch(() => null);
+        if (!r.ok) {
+          console.error("Items fetch failed:", data);
+          setItems([]);
+          return;
+        }
+        setItems(Array.isArray(data) ? data : data?.items || []);
+      })
+      .catch(error => {
+        console.error("Items fetch error:", error);
+        setItems([]);
+      });
   }, [token]);
 
   useEffect(() => {
     if (!token) return;
     const interval = setInterval(() => {
       fetch(`${API}/api/notifications`, { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.json())
-        .then(data => setNotifications(data.data || []))
-        .catch(console.error);
+        .then(async (r) => {
+          const data = await r.json().catch(() => null);
+          if (!r.ok) {
+            console.error("Notifications fetch failed:", data);
+            setNotifications([]);
+            return;
+          }
+          setNotifications(Array.isArray(data) ? data : data?.data || []);
+        })
+        .catch(error => {
+          console.error("Notifications fetch error:", error);
+          setNotifications([]);
+        });
     }, 5000);
     return () => clearInterval(interval);
   }, [token]);
@@ -241,10 +273,11 @@ export default function App() {
     setSidebarOpen(true);
   };
 
-  const handleLogin = (t) => {
+  const handleLogin = (t, redirect) => {
     localStorage.setItem("token", t);
     setToken(t);
     setMode("login");
+    setPage(redirect || "home");
   };
 
   const handleSidebarNav = (pageId) => {
@@ -1168,8 +1201,16 @@ export default function App() {
             {/* DASHBOARD PAGE */}
             {page === "dashboard" && (
               <>
-                <div className="page-title">Dashboard</div>
-                <div className="page-subtitle">Overview of your tracked items</div>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'baseline'}}>
+                  <div>
+                    <div className="page-title">Dashboard</div>
+                    <div className="page-subtitle">Overview of your tracked items</div>
+                  </div>
+                  <div style={{textAlign: 'right'}}>
+                    <div style={{fontSize: 18, fontWeight: 700}}>Hello{userName ? `, ${userName}` : ""} 👋</div>
+                    <div style={{fontSize: 12, color: '#888'}}>Welcome back</div>
+                  </div>
+                </div>
 
                 <div className="stats">
                   <div className="stat-card">
