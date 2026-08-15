@@ -12,7 +12,8 @@ const app = express();
 
 /* ───────────── Middlewares ───────────── */
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  // support both FRONTEND_URL and CLIENT_URL env names (fallback for older .env)
+  origin: process.env.FRONTEND_URL || process.env.CLIENT_URL || "http://localhost:5173",
   credentials: true
 }));
 app.use(express.json());
