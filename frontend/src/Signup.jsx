@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
+const API = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+
 export default function Signup({ onLogin, switchMode }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -22,14 +24,11 @@ export default function Signup({ onLogin, switchMode }) {
     }
     setLoading(true);
     setError("");
-    const res = await fetch(
-      `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/signup`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      }
-    );
+    const res = await fetch(`${API}/api/auth/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password }),
+    });
     const data = await res.json();
     setLoading(false);
     if (res.ok) {

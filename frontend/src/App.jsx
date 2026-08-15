@@ -2,7 +2,7 @@ import Login from "./Login";
 import Signup from "./Signup";
 import { useEffect, useMemo, useState } from "react";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
 
 const STATUS = {
   Active:          { color: "#853953", bg: "#FCF1F6" },
